@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quiz de Matemática</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- APP -->
+    <meta name="theme-color" content="#1f6feb" />
+
+    <!-- iOS (opcional, melhora aparência ao "Adicionar à Tela de Início") -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Quiz Matemática" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+    <style>
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f4f6f8;
+        margin: 0;
+        padding: 24px;
+      }
+
+      .card {
+        max-width: 520px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 22px;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 10px 0;
+      }
+
+      select,
+      input {
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #d0d7de;
+        font-size: 14px;
+        flex: 1;
+        min-width: 140px;
+      }
+
+      button {
+        padding: 10px 12px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        background: #1f6feb;
+        color: white;
+        transition: transform 0.05s ease;
+      }
+
+      button:active {
+        transform: scale(0.98);
+      }
+
+      button.secondary {
+        background: #6e7781;
+      }
+
+      button.good {
+        background: #2da44e;
+      }
+
+      .question {
+        margin-top: 14px;
+        padding: 12px;
+        background: #f6f8fa;
+        border: 1px solid #eaeef2;
+        border-radius: 10px;
+        font-size: 18px;
+      }
+
+      .feedback {
+        margin-top: 10px;
+        font-size: 14px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .answerBox {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 10px;
+        border: 1px dashed #c7d2fe;
+        background: #eef2ff;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Quiz de Matemática (+ − × ÷)</h1>
+
+      <div class="row">
+        <label style="flex: 1">
+          <select id="tipo">
+            <option value="soma">Soma</option>
+            <option value="sub">Subtração</option>
+            <option value="mult">Multiplicação</option>
+            <option value="div">Divisão</option>
+          </select>
+        </label>
+
+        <button id="btnNova">Nova pergunta</button>
+      </div>
+
+      <div class="question" id="pergunta">Clique em “Nova pergunta”.</div>
+
+      <div class="row">
+        <input
+          id="respostaUser"
+          type="number"
+          placeholder="Digite sua resposta"
+        />
+        <button class="good" id="btnConferir">Conferir</button>
+      </div>
+
+      <div class="row">
+        <button class="secondary" id="btnMostrar">Mostrar resposta</button>
+        <button class="secondary" id="btnOcultar">Ocultar resposta</button>
+      </div>
+
+      <div class="answerBox hidden" id="boxResposta"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+
+    <script>
+      function randInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+
+      // Gera pares aleatórios sem "padrão fixo"
+      function gerarNumerosVariados() {
+        const modo = randInt(1, 4);
+        let a, b;
+
+        if (modo === 1) {
+          a = randInt(0, 10);
+          b = randInt(0, 10);
+        }
+        if (modo === 2) {
+          a = randInt(5, 30);
+          b = randInt(0, 20);
+        }
+        if (modo === 3) {
+          a = randInt(10, 99);
+          b = randInt(1, 12);
+        }
+        if (modo === 4) {
+          a = randInt(1, 50);
+          b = randInt(1, 50);
+        }
+
+        if (Math.random() < 0.35) {
+          const t = a;
+          a = b;
+          b = t;
+        }
+
+        return { a, b };
+      }
+
+      // Divisão com resultado inteiro: cria (a ÷ b) onde a = b * resultado
+      function gerarDivisaoInteira() {
+        const modo = randInt(1, 4);
+
+        // divisor (b) e resultado (r) variam por modo para evitar padrão
+        let b, r;
+
+        if (modo === 1) {
+          b = randInt(1, 10);
+          r = randInt(0, 10);
+        }
+        if (modo === 2) {
+          b = randInt(2, 12);
+          r = randInt(1, 12);
+        }
+        if (modo === 3) {
+          b = randInt(3, 15);
+          r = randInt(2, 20);
+        }
+        if (modo === 4) {
+          b = randInt(1, 20);
+          r = randInt(1, 25);
+        }
+
+        // garante b != 0
+        if (b === 0) b = 1;
+
+        const a = b * r;
+
+        // pequena chance de deixar o dividendo maior (aumenta variedade)
+        // sem quebrar a divisão inteira:
+        if (Math.random() < 0.25) {
+          const extra = randInt(0, 3);
+          return { a: a + b * extra, b, resultado: r + extra };
+        }
+
+        return { a, b, resultado: r };
+      }
+
+      function gerarPergunta(tipo) {
+        let texto = "";
+        let resultado = 0;
+        let a, b;
+
+        if (tipo === "div") {
+          const d = gerarDivisaoInteira();
+          a = d.a;
+          b = d.b;
+          resultado = d.resultado;
+          texto = `${a} ÷ ${b} = ?`;
+          return { a, b, texto, resultado, tipo };
+        }
+
+        const n = gerarNumerosVariados();
+        a = n.a;
+        b = n.b;
+
+        if (tipo === "soma") {
+          texto = `${a} + ${b} = ?`;
+          resultado = a + b;
+        } else if (tipo === "sub") {
+          // evita resultado negativo: garante a >= b
+          if (b > a) {
+            const t = a;
+            a = b;
+            b = t;
+          }
+          texto = `${a} − ${b} = ?`;
+          resultado = a - b;
+        } else if (tipo === "mult") {
+          texto = `${a} × ${b} = ?`;
+          resultado = a * b;
+        }
+
+        return { a, b, texto, resultado, tipo };
+      }
+
+      const tipoEl = document.getElementById("tipo");
+      const perguntaEl = document.getElementById("pergunta");
+      const respostaUserEl = document.getElementById("respostaUser");
+      const feedbackEl = document.getElementById("feedback");
+      const boxRespostaEl = document.getElementById("boxResposta");
+
+      const btnNova = document.getElementById("btnNova");
+      const btnConferir = document.getElementById("btnConferir");
+      const btnMostrar = document.getElementById("btnMostrar");
+      const btnOcultar = document.getElementById("btnOcultar");
+
+      let atual = null;
+
+      function novaPergunta() {
+        const tipo = tipoEl.value;
+        atual = gerarPergunta(tipo);
+
+        perguntaEl.textContent = atual.texto;
+        respostaUserEl.value = "";
+        feedbackEl.textContent = "";
+        boxRespostaEl.classList.add("hidden");
+        boxRespostaEl.textContent = "";
+        respostaUserEl.focus();
+      }
+
+      btnNova.addEventListener("click", novaPergunta);
+
+      btnConferir.addEventListener("click", () => {
+        if (!atual) {
+          feedbackEl.textContent = "Primeiro clique em “Nova pergunta”.";
+          return;
+        }
+
+        const valor = respostaUserEl.value;
+        if (valor === "") {
+          feedbackEl.textContent = "Digite uma resposta antes de conferir.";
+          return;
+        }
+
+        const resp = Number(valor);
+        if (resp === atual.resultado) {
+          feedbackEl.textContent = "✅ Certo! Boa!";
+        } else {
+          feedbackEl.textContent =
+            "❌ Errado. Tente de novo ou clique em “Mostrar resposta”.";
+        }
+      });
+
+      btnMostrar.addEventListener("click", () => {
+        if (!atual) {
+          feedbackEl.textContent = "Primeiro clique em “Nova pergunta”.";
+          return;
+        }
+        boxRespostaEl.textContent = `Resposta: ${atual.resultado}`;
+        boxRespostaEl.classList.remove("hidden");
+      });
+
+      btnOcultar.addEventListener("click", () => {
+        boxRespostaEl.classList.add("hidden");
+        boxRespostaEl.textContent = "";
+      });
+
+      // Começa já com uma pergunta
+      novaPergunta();
+      // app
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js");
+        });
+      }
+    </script>
+    
+  </body>
+</html>
